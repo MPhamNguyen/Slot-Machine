@@ -9,9 +9,7 @@ from PyQt5.QtMultimedia import QSoundEffect
 """"
 TO-DO
 - Work on better sounds
--Replace spins with a button press that controls when to stop
 """
-
 
 slots = 4
 screenHeight = 160
@@ -23,12 +21,12 @@ class SlotStrip(QLabel):
         self.parent = parent
         self.id = id
         self.ghostStrip = ghostStrip
-        self.temp = 0
+        self.counter = 0
         self.switch = True
         self.endSequence = False
         self.targetPos = 0
         self.spinRate = 20 
-        self.spins = 2 + (self.id * 2) #Controls how many spins before starting ending sequence 
+        self.spins = -1
 
         self.setGeometry(x,y,width,height)
         self.setPixmap(QPixmap("slotmachine.png"))
@@ -61,20 +59,19 @@ class SlotStrip(QLabel):
             #Sets normstrip back to start
             if (self.pos().y() <= screenHeight * -slots):
                 self.switch = False
-                self.temp += 1
+                self.counter += 1
                 self.move(self.pos().x(), screenHeight)
 
             #Sets ghoststrip back to start
             if (self.ghostStrip.pos().y() <= screenHeight * -slots):
                 self.switch = True
-                self.temp += 1
+                self.counter += 1
                 self.ghostStrip.move(self.ghostStrip.pos().x(), screenHeight)
 
             #Condition to end
-            if (self.temp == self.spins):
+            if (self.counter == self.spins):
                 self.endSequence = True
-                # self.targetPos = -screenHeight * self.parent.getSlotTargets(self.id)
-                self.targetPos = -screenHeight * 0
+                self.targetPos = -screenHeight * self.parent.getSlotTargets(self.id)
 
         else:
             if (self.switch):
@@ -105,15 +102,25 @@ class SlotStrip(QLabel):
         self.timer.stop()
 
     def reset(self):
-        self.temp = 0
+        self.counter = 0
+        self.spins = -1
         self.endSequence = False
         self.timer.start()
+
+    def endingSequence(self):
+        if (self.id == 1):
+            self.spins = 1 + self.counter 
+        if (self.id == numOfTargetSlots):
+            self.spins = 3 + self.counter + ((self.id - 1) * 2)
+        else:
+            self.spins = 1 + self.counter + ((self.id - 1) * 2)
         
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.slotTargets = [0,0,0,0,0]
+        self.toggle = False
         
         #Calculates if you win on startup
         self.win()
@@ -174,14 +181,24 @@ class MainWindow(QMainWindow):
         else:
             self.sounds["slotLoop"].stop()
         
-    def reset(self):
-        self.win()
-        self.playSpinSounds(True)
-        self.slotstrip1.reset()
-        self.slotstrip2.reset()
-        self.slotstrip3.reset()
-        self.slotstrip4.reset()
-        self.slotstrip5.reset()
+    def buttonPress(self):
+        if self.toggle:
+            self.win()
+            self.playSpinSounds(True)
+            self.slotstrip1.reset()
+            self.slotstrip2.reset()
+            self.slotstrip3.reset()
+            self.slotstrip4.reset()
+            self.slotstrip5.reset()
+            self.toggle = False
+        else:
+            self.slotstrip1.endingSequence()
+            self.slotstrip2.endingSequence()
+            self.slotstrip3.endingSequence()
+            self.slotstrip4.endingSequence()
+            self.slotstrip5.endingSequence()
+            self.toggle = True
+
 
     def getSlotTargets(self, slotId):
         return self.slotTargets[slotId - 1]
@@ -229,7 +246,7 @@ class MainWindow(QMainWindow):
         border-radius: 10px;
         text-transform: uppercase;                          
         """)
-        self.button.clicked.connect(self.reset)
+        self.button.clicked.connect(self.buttonPress)
         self.playSpinSounds(True)
         self.show()
 
