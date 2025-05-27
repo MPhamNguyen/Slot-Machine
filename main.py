@@ -94,6 +94,7 @@ class SlotStrip(QLabel):
 
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
+        self.parent.debounce = True
 
     def playLandingSound(self):
         self.parent.sounds["slotLand"].play()
@@ -121,6 +122,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.slotTargets = [0,0,0,0,0]
         self.toggle = False
+        self.debounce = False
         
         #Calculates if you win on startup
         self.win()
@@ -182,7 +184,7 @@ class MainWindow(QMainWindow):
             self.sounds["slotLoop"].stop()
         
     def buttonPress(self):
-        if self.toggle:
+        if self.toggle and self.debounce:
             self.win()
             self.playSpinSounds(True)
             self.slotstrip1.reset()
@@ -191,7 +193,8 @@ class MainWindow(QMainWindow):
             self.slotstrip4.reset()
             self.slotstrip5.reset()
             self.toggle = False
-        else:
+            self.completed = False
+        elif (not self.toggle):
             self.slotstrip1.endingSequence()
             self.slotstrip2.endingSequence()
             self.slotstrip3.endingSequence()
