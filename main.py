@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
             self.sounds["slotLoop"].stop()
         
     def buttonPress(self):
-        if self.toggle and self.debounce:
+        if self.toggle and self.debounce: #Restarts spinning animation
             self.win()
             self.playSpinSounds(True)
             self.slotstrip1.reset()
@@ -199,8 +199,8 @@ class MainWindow(QMainWindow):
             self.slotstrip4.reset()
             self.slotstrip5.reset()
             self.toggle = False
-            self.completed = False
-        elif (not self.toggle):
+            self.debounce = False
+        elif (not self.toggle): #Stop the spinning animation
             self.slotstrip1.endingSequence()
             self.slotstrip2.endingSequence()
             self.slotstrip3.endingSequence()
