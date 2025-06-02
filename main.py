@@ -33,7 +33,6 @@ class SlotStrip(QLabel):
             self.id = id
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.move_label)
-            # self.timer.start(tick)
 
     def move_label(self):
         if (not self.endSequence):
@@ -93,6 +92,9 @@ class SlotStrip(QLabel):
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
         self.parent.debounce = True
+        
+        if (self.parent.winFlag):
+            self.parent.sounds["slotWin"].play()
 
     def playLandingSound(self):
         self.parent.sounds["slotLand"].play()
@@ -104,7 +106,9 @@ class SlotStrip(QLabel):
         self.counter = 0
         self.spins = -1
         self.endSequence = False
+        self.parent.sounds["slotWin"].stop()
         self.staggeredStart()
+        
 
     def staggeredStart(self):
         #Staggers when each slot starts to spin again
@@ -126,6 +130,7 @@ class MainWindow(QMainWindow):
         self.slotTargets = [0,0,0,0,0]
         self.toggle = False #Controls button functionality from slot stop/reset
         self.debounce = False #Prevents button spam
+        self.winFlag = False #Win flag
         
         #Calculates if you win on startup
         self.win()
@@ -141,24 +146,29 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
 
+        #Initialize sounds
         self.sounds = {
             "slotLoop": QSoundEffect(),
-            "slotLand": QSoundEffect()
+            "slotLand": QSoundEffect(),
+            "slotWin": QSoundEffect(),
         }
         self.sounds["slotLoop"].setSource(QUrl.fromLocalFile("slotloop.wav"))
-        self.sounds["slotLand"].setSource(QUrl.fromLocalFile("slotland.wav"))
-
-
         self.sounds["slotLoop"].setLoopCount(QSoundEffect.Infinite)
         self.sounds["slotLoop"].setVolume(0.1)
 
+        self.sounds["slotLand"].setSource(QUrl.fromLocalFile("slotland1.wav"))
         self.sounds["slotLand"].setLoopCount(1)
-        self.sounds["slotLand"].setVolume(0.05)
+        self.sounds["slotLand"].setVolume(0.15)
+
+        self.sounds["slotWin"].setSource(QUrl.fromLocalFile("slotwin.wav"))
+        self.sounds["slotWin"].setLoopCount(2)
+        self.sounds["slotWin"].setVolume(0.2)
 
         for sound in self.sounds.values():
             while sound.status() != QSoundEffect.Ready:
                 QCoreApplication.processEvents()
 
+        #Initialized UI
         self.initialize()
 
     def win(self):
@@ -168,6 +178,7 @@ class MainWindow(QMainWindow):
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
             self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, targetSlot]
+            self.winFlag = True
         else:
             first, second, third, fourth, fifth = random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1)
 
@@ -188,6 +199,7 @@ class MainWindow(QMainWindow):
             self.slotTargets[2] = third
             self.slotTargets[3] = fourth
             self.slotTargets[4] = fifth
+            self.winFlag = False
 
     def playSpinSounds(self, switch):
         if (switch):
@@ -225,6 +237,7 @@ class MainWindow(QMainWindow):
             self.slotstrip1.restart()
 
     def initialize(self):
+        #Create slot objects
         self.slotstrip1Ghost = SlotStrip(self, None, viewportOffset, screenHeight + viewportOffset)
         self.slotstrip1 = SlotStrip(self, self.slotstrip1Ghost, id=1, spin=True)
 
