@@ -2,7 +2,7 @@ import sys
 import random
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QDesktopWidget
 from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication
+from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication, QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
 
@@ -10,9 +10,10 @@ slots = 4 #Num of icons
 screenHeight = 160 #Size for a single slot to be shown (px)
 viewportOffset = 160 #Y-Offset of slot from y=0 (px)
 numOfStrips = 5 #Num of strips
+tick = 10 #Tick rate
 
 class SlotStrip(QLabel):
-    def __init__(self, parent=None, ghostStrip=None, x=0, y=viewportOffset, width=screenHeight, height=screenHeight*4, id=1, spin=False, tick=10):
+    def __init__(self, parent=None, ghostStrip=None, x=0, y=viewportOffset, width=screenHeight, height=screenHeight*4, id=1, spin=False):
         super().__init__(parent)
         self.parent = parent
         self.id = id
@@ -32,7 +33,7 @@ class SlotStrip(QLabel):
             self.id = id
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.move_label)
-            self.timer.start(tick)
+            # self.timer.start(tick)
 
     def move_label(self):
         if (not self.endSequence):
@@ -103,7 +104,12 @@ class SlotStrip(QLabel):
         self.counter = 0
         self.spins = -1
         self.endSequence = False
-        self.timer.start()
+        self.staggeredStart()
+
+    def staggeredStart(self):
+        #Staggers when each slot starts to spin again
+        delay = self.id * 100 
+        QTimer.singleShot(delay, lambda: self.timer.start(tick))
 
     def endingSequence(self):
         if (self.id == 1):
@@ -118,8 +124,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.slotTargets = [0,0,0,0,0]
-        self.toggle = False
-        self.debounce = False
+        self.toggle = False #Controls button functionality from slot stop/reset
+        self.debounce = False #Prevents button spam
         
         #Calculates if you win on startup
         self.win()
@@ -239,6 +245,7 @@ class MainWindow(QMainWindow):
         self.topBorder = QLabel(self)
         self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, viewportOffset)
         self.topBorder.setStyleSheet("background-color: #850b04;")
+        self.topBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.topBorderDivide = QLabel(self)
         self.topBorderDivide.setGeometry(0, viewportOffset - 2, screenHeight * numOfStrips, 2)
@@ -247,11 +254,12 @@ class MainWindow(QMainWindow):
         self.botBorder = QLabel(self)
         self.botBorder.setGeometry(0, viewportOffset + screenHeight + 2, screenHeight * numOfStrips, self.height() - (viewportOffset + screenHeight) - 2)
         self.botBorder.setStyleSheet("background-color: #850b04;")
+        self.botBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.botBorderDivide = QLabel(self)
         self.botBorderDivide.setGeometry(0, viewportOffset + screenHeight, screenHeight * numOfStrips, 2)
         self.botBorderDivide.setStyleSheet("background-color: black;")
-
+        
         #Temp button
         self.button = QPushButton("SPIN", self)
         self.button.setGeometry(self.width() - 110,self.height() - 90,100,80)
@@ -277,6 +285,13 @@ class MainWindow(QMainWindow):
 
         # self.show() #For testing purposes
         self.showFullScreen() #Comment back on live version
+
+        #Initial Startup
+        self.slotstrip1.staggeredStart()
+        self.slotstrip2.staggeredStart()
+        self.slotstrip3.staggeredStart()
+        self.slotstrip4.staggeredStart()
+        self.slotstrip5.staggeredStart()
 
 def main():
     app = QApplication(sys.argv)
