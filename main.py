@@ -120,7 +120,11 @@ class SlotStrip(QWidget):
         self.parent.debounce = True
         
         if (self.parent.winFlag):
-            self.parent.sounds["slotWin"].play()
+            if (self.parent.majorWin):
+                self.parent.sounds["slotWin"].play()
+            else:
+                #Play different sound
+                pass
 
     def playLandingSound(self):
         self.parent.sounds["slotLand"].play()
@@ -200,14 +204,14 @@ class MainWindow(QMainWindow):
 
     def win(self):
         probability = random.random()
-        winRate = 0.15
+        winRate = 1
 
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
             self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, targetSlot]
             self.winFlag = True
 
-            if (targetSlot == majorPrizeIndex):
+            if (targetSlot == majorPrizeIndex - 1):
                 self.majorWin = True
             else:
                 self.majorWin = False
