@@ -1,93 +1,119 @@
 import sys
 import random
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QDesktopWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QDesktopWidget, QWidget
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication, QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
 
-slots = 4 #Num of icons
+slots = 6 #Num of icons
 screenHeight = 160 #Size for a single slot to be shown (px)
 viewportOffset = 160 #Y-Offset of slot from y=0 (px)
 numOfStrips = 5 #Num of strips
 tick = 10 #Tick rate
+majorPrizeIndex = 1 #Num corresponding to major prize icon
 
-class SlotStrip(QLabel):
-    def __init__(self, parent=None, ghostStrip=None, x=0, y=viewportOffset, width=screenHeight, height=screenHeight*4, id=1, spin=False):
+icons = [num + 1 for num in range(slots)]
+
+temp = 50 
+
+class SlotStrip(QWidget):
+    def __init__(self, parent=None, x=0, y=viewportOffset - temp, width=screenHeight, height=screenHeight*slots, id=1, test="slotmachine.png"):
         super().__init__(parent)
+        self.setGeometry(x, y, width, height)
+
         self.parent = parent
         self.id = id
-        self.ghostStrip = ghostStrip
         self.counter = 0
         self.switch = True
         self.endSequence = False
         self.targetPos = 0
-        self.spinRate = 20 
+        self.spinRate = 20
         self.spins = -1
+        self.debounce = True
+        self.target = -1
+        
+        self.innerLayout = icons.copy()
+        random.shuffle(self.innerLayout)
 
-        self.setGeometry(x,y,width,height)
-        self.setPixmap(QPixmap("slotmachine.png"))
-        self.setScaledContents(True)
+        self.innerGhostLayout = icons.copy()
+        random.shuffle(self.innerGhostLayout)
 
-        if (ghostStrip):
-            self.id = id
-            self.timer = QTimer(self)
-            self.timer.timeout.connect(self.move_label)
+        self.inner = QWidget(self)
+        self.innerGhost = QWidget(self)
+        self.innerGhost.move(0, -(screenHeight * slots))
 
-    def move_label(self):
-        if (not self.endSequence):
-            #Handles moving each strip normally
+        for i, path in enumerate(self.innerLayout):
+            label = QLabel(self.inner)
+            pixmap = QPixmap(f"icon{path}.png").scaled(width, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            label.setPixmap(pixmap)
+            label.setGeometry(0, i * screenHeight, width, screenHeight)
+        
+        for i, path2 in enumerate(self.innerGhostLayout):
+            label = QLabel(self.innerGhost)
+            pixmap = QPixmap(f"icon{path2}.png").scaled(width, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            label.setPixmap(pixmap)
+            label.setGeometry(0, i * screenHeight, width, screenHeight)
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.animate)
+
+
+    def animate(self):
+        if not (self.endSequence):
+            self.inner.move(self.inner.pos().x(), self.inner.pos().y() + self.spinRate)
+            self.innerGhost.move(self.innerGhost.pos().x(), self.innerGhost.pos().y() + self.spinRate)
+
+            if (self.debounce):
+                if (self.inner.pos().y() >= temp + screenHeight):
+                    self.switch = False
+                    self.counter += 1
+                    self.debounce = False
+                elif (self.innerGhost.pos().y() >= temp + screenHeight):
+                    self.switch = True
+                    self.counter += 1
+                    self.debounce = False
+
+        if (self.endSequence):
             if (self.switch):
-                if (self.pos().y() >= screenHeight * -(slots) + viewportOffset):
-                    self.move(self.pos().x(), self.pos().y() - self.spinRate)
-            else:
-                if (self.ghostStrip.pos().y() >= screenHeight * -(slots) + viewportOffset):
-                    self.ghostStrip.move(self.ghostStrip.pos().x(), self.ghostStrip.pos().y() - self.spinRate)
-
-            #Starts moving ghoststrip when normstrip is about to run off
-            if (self.pos().y() < screenHeight * -(slots - 1) + viewportOffset):
-                self.ghostStrip.move(self.pos().x(), self.ghostStrip.pos().y() - self.spinRate)
-
-            #Starts moving normstrip when ghoststrip is about to run off
-            if (self.ghostStrip.pos().y() < screenHeight * -(slots - 1) + viewportOffset):
-                self.move(self.pos().x(), self.pos().y() - self.spinRate)
-
-            #Sets normstrip back to start
-            if (self.pos().y() <= (screenHeight * -slots) + viewportOffset):
-                self.switch = False
-                self.counter += 1
-                self.move(self.pos().x(), screenHeight + viewportOffset)
-
-            #Sets ghoststrip back to start
-            if (self.ghostStrip.pos().y() <= (screenHeight * -slots) + viewportOffset):
-                self.switch = True
-                self.counter += 1
-                self.ghostStrip.move(self.ghostStrip.pos().x(), screenHeight + viewportOffset)
-
-            #Condition to end
-            if (self.counter == self.spins):
-                self.endSequence = True
-                self.targetPos = -screenHeight * self.parent.getSlotTargets(self.id) + viewportOffset
-
-        else:
-            if (self.switch):
-                if (self.pos().y() > self.targetPos):
-                    self.move(self.pos().x(), self.pos().y() - self.spinRate)
-                else:
+                if (self.inner.pos().y() >= self.targetPos):
                     self.playLandingSound()
                     self.stopSpin()
 
                     if (self.id == numOfStrips):
                         self.sequenceFinished()
+                else:    
+                    self.inner.move(self.inner.pos().x(), self.inner.pos().y() + self.spinRate)
+                    self.innerGhost.move(self.innerGhost.pos().x(), self.innerGhost.pos().y() + self.spinRate)
             else:
-                if (self.ghostStrip.pos().y() > self.targetPos):
-                    self.ghostStrip.move(self.ghostStrip.pos().x(), self.ghostStrip.pos().y() - self.spinRate)
-                else:
+                if (self.innerGhost.pos().y() >= self.targetPos):
                     self.playLandingSound()
                     self.stopSpin()
 
                     if (self.id == numOfStrips):
                         self.sequenceFinished()
+                else:          
+                    self.inner.move(self.inner.pos().x(), self.inner.pos().y() + self.spinRate)
+                    self.innerGhost.move(self.innerGhost.pos().x(), self.innerGhost.pos().y() + self.spinRate)
+
+        #Sets normstrip back to start
+        if (self.inner.pos().y() >= (2 * temp) + screenHeight):
+            self.inner.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
+            self.debounce = True
+
+        #Sets ghoststrip back to start
+        if (self.innerGhost.pos().y() >= (2 * temp) + screenHeight):
+            self.innerGhost.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
+            self.debounce = True
+
+        #Condition to end
+        if (self.counter == self.spins):
+            self.endSequence = True
+            if (self.switch):
+                self.target = self.innerLayout.index(self.parent.getSlotTargets(self.id) + 1)
+            else:
+                self.target = self.innerGhostLayout.index(self.parent.getSlotTargets(self.id) + 1)
+            self.targetPos = -screenHeight * self.target  + temp
 
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
@@ -109,7 +135,6 @@ class SlotStrip(QLabel):
         self.parent.sounds["slotWin"].stop()
         self.staggeredStart()
         
-
     def staggeredStart(self):
         #Staggers when each slot starts to spin again
         delay = self.id * 100 
@@ -118,11 +143,11 @@ class SlotStrip(QLabel):
     def endingSequence(self):
         if (self.id == 1):
             self.spins = 1 + self.counter 
+            self.parent.globalSpin = self.spins
         if (self.id == numOfStrips):
-            self.spins = 3 + self.counter + ((self.id - 1) * 2)
+            self.spins = 3 + self.parent.globalSpin + ((self.id - 1) * 2)
         else:
-            self.spins = 1 + self.counter + ((self.id - 1) * 2)
-        
+            self.spins = 1 + self.parent.globalSpin + ((self.id - 1) * 2)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -131,6 +156,8 @@ class MainWindow(QMainWindow):
         self.toggle = False #Controls button functionality from slot stop/reset
         self.debounce = False #Prevents button spam
         self.winFlag = False #Win flag
+        self.majorWin = False
+        self.globalSpin = -1 #Basis for ending
         
         #Calculates if you win on startup
         self.win()
@@ -140,9 +167,9 @@ class MainWindow(QMainWindow):
 
         #Centers window
         centerPoint = QDesktopWidget().availableGeometry().center()
-        temp = self.frameGeometry()
-        temp.moveCenter(centerPoint)
-        self.move(temp.topLeft())
+        temp1 = self.frameGeometry()
+        temp1.moveCenter(centerPoint)
+        self.move(temp1.topLeft())
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
 
@@ -161,8 +188,8 @@ class MainWindow(QMainWindow):
         self.sounds["slotLand"].setVolume(0.15)
 
         self.sounds["slotWin"].setSource(QUrl.fromLocalFile("slotwin.wav"))
-        self.sounds["slotWin"].setLoopCount(2)
-        self.sounds["slotWin"].setVolume(0.2)
+        self.sounds["slotWin"].setLoopCount(1)
+        self.sounds["slotWin"].setVolume(0.1)
 
         for sound in self.sounds.values():
             while sound.status() != QSoundEffect.Ready:
@@ -173,12 +200,17 @@ class MainWindow(QMainWindow):
 
     def win(self):
         probability = random.random()
-        winRate = 0.5
+        winRate = 0.15
 
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
             self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, targetSlot]
             self.winFlag = True
+
+            if (targetSlot == majorPrizeIndex):
+                self.majorWin = True
+            else:
+                self.majorWin = False
         else:
             first, second, third, fourth, fifth = random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1)
 
@@ -189,10 +221,10 @@ class MainWindow(QMainWindow):
                 third = random.randint(0,slots - 1)
 
             while (fourth == first and fourth == second and fourth == third):
-                third = random.randint(0,slots - 1)
+                fourth = random.randint(0,slots - 1)
 
             while (fifth == first and fifth == second and fifth == third and fifth == fourth):
-                third = random.randint(0,slots - 1)
+                fifth = random.randint(0,slots - 1)
 
             self.slotTargets[0] = first
             self.slotTargets[1] = second
@@ -229,48 +261,53 @@ class MainWindow(QMainWindow):
 
     def getSlotTargets(self, slotId):
         return self.slotTargets[slotId - 1]
+    
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:
             self.close()
-        elif event.key() == Qt.Key_Q:
-            self.slotstrip1.restart()
+        # elif event.key() == Qt.Key_Q:
+            # print(self.slotstrip1.inner.pos())
+            # print(self.slotstrip1.innerGhost.pos())
+            # self.slotstrip1.stopSpin()
+            # self.slotstrip2.stopSpin()
+            # self.slotstrip3.stopSpin()
+            # self.slotstrip4.stopSpin()
+            # self.slotstrip5.stopSpin()
+        # elif event.key() == Qt.Key_P:
+        #     self.slotstrip1.timer.start()
+        #     self.slotstrip2.timer.start()
+        #     self.slotstrip3.timer.start()
+        #     self.slotstrip4.timer.start()
+        #     self.slotstrip5.timer.start()
+        # elif event.key() == Qt.Key_Z:
+        #     pass
 
     def initialize(self):
         #Create slot objects
-        self.slotstrip1Ghost = SlotStrip(self, None, viewportOffset, screenHeight + viewportOffset)
-        self.slotstrip1 = SlotStrip(self, self.slotstrip1Ghost, id=1, spin=True)
-
-        self.slotstrip2Ghost = SlotStrip(self, None, screenHeight, screenHeight + viewportOffset)
-        self.slotstrip2 = SlotStrip(self, self.slotstrip2Ghost, screenHeight, viewportOffset, id=2, spin=True)
-
-        self.slotstrip3Ghost = SlotStrip(self, None, screenHeight*2, screenHeight + viewportOffset)
-        self.slotstrip3 = SlotStrip(self, self.slotstrip3Ghost, screenHeight*2, viewportOffset, id=3, spin=True)
-
-        self.slotstrip4Ghost = SlotStrip(self, None, screenHeight*3, screenHeight + viewportOffset)
-        self.slotstrip4 = SlotStrip(self, self.slotstrip4Ghost, screenHeight*3, viewportOffset, id=4, spin=True)
-
-        self.slotstrip5Ghost = SlotStrip(self, None, screenHeight*4, screenHeight + viewportOffset)
-        self.slotstrip5 = SlotStrip(self, self.slotstrip5Ghost, screenHeight*4, viewportOffset, id=5, spin=True)
-
+        self.slotstrip1 = SlotStrip(self, id=1)
+        self.slotstrip2 = SlotStrip(self, screenHeight, id=2)
+        self.slotstrip3 = SlotStrip(self, screenHeight*2, id=3)
+        self.slotstrip4 = SlotStrip(self, screenHeight*3, id=4)
+        self.slotstrip5 = SlotStrip(self, screenHeight*4, id=5)
 
         #UI Things
         self.topBorder = QLabel(self)
-        self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, viewportOffset)
+        self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, viewportOffset - temp)
         self.topBorder.setStyleSheet("background-color: #850b04;")
         self.topBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.topBorderDivide = QLabel(self)
-        self.topBorderDivide.setGeometry(0, viewportOffset - 2, screenHeight * numOfStrips, 2)
+        self.topBorderDivide.setGeometry(0, viewportOffset - 2 - temp, screenHeight * numOfStrips, 2)
         self.topBorderDivide.setStyleSheet("background-color: black;")
 
         self.botBorder = QLabel(self)
-        self.botBorder.setGeometry(0, viewportOffset + screenHeight + 2, screenHeight * numOfStrips, self.height() - (viewportOffset + screenHeight) - 2)
+        self.botBorder.setGeometry(0, viewportOffset + screenHeight + 2 + temp, screenHeight * numOfStrips, self.height() - (viewportOffset + screenHeight + temp) - 2)
         self.botBorder.setStyleSheet("background-color: #850b04;")
         self.botBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.botBorderDivide = QLabel(self)
-        self.botBorderDivide.setGeometry(0, viewportOffset + screenHeight, screenHeight * numOfStrips, 2)
+        self.botBorderDivide.setGeometry(0, viewportOffset + screenHeight + temp, screenHeight * numOfStrips, 2)
         self.botBorderDivide.setStyleSheet("background-color: black;")
         
         #Temp button
@@ -292,7 +329,7 @@ class MainWindow(QMainWindow):
 
         #Title
         self.title = QLabel(self)
-        self.title.setGeometry(147,20,506,120)
+        self.title.setGeometry(231,20,338,80)
         self.title.setPixmap(QPixmap("title.png"))
         self.title.setScaledContents(True)
 
@@ -306,10 +343,9 @@ class MainWindow(QMainWindow):
         self.slotstrip4.staggeredStart()
         self.slotstrip5.staggeredStart()
 
-def main():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    sys.exit(app.exec())
-
 if __name__ == "__main__":
-    main()
+    app = QApplication(sys.argv)
+
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
