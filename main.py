@@ -7,7 +7,7 @@ from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
 
 slots = 6 #Num of icons
-screenHeight = 160 #Size for a single slot to be shown (px)
+screenHeight = 160 #NxN size for a single slot to be shown (px) 
 viewportOffset = 160 #Y-Offset of slot from y=0 (px)
 numOfStrips = 5 #Num of strips
 tick = 10 #Tick rate
@@ -15,12 +15,12 @@ majorPrizeIndex = 1 #Num corresponding to major prize icon
 
 icons = [num + 1 for num in range(slots)]
 
-temp = 50 
+temp = 50 #Extra viewport space to see other slots
 
 class SlotStrip(QWidget):
-    def __init__(self, parent=None, x=0, y=viewportOffset - temp, width=screenHeight, height=screenHeight*slots, id=1, test="slotmachine.png"):
+    def __init__(self, parent=None, x=0, y=viewportOffset - temp, width=screenHeight, height=screenHeight*slots, id=1):
         super().__init__(parent)
-        self.setGeometry(x, y, width, height)
+        self.setGeometry(x, y, width, screenHeight + (2 * temp))
 
         self.parent = parent
         self.id = id
@@ -35,9 +35,11 @@ class SlotStrip(QWidget):
         
         self.innerLayout = icons.copy()
         random.shuffle(self.innerLayout)
+        self.innerIcons = []
 
         self.innerGhostLayout = icons.copy()
         random.shuffle(self.innerGhostLayout)
+        self.innerGhostIcons = []
 
         self.inner = QWidget(self)
         self.innerGhost = QWidget(self)
@@ -45,19 +47,20 @@ class SlotStrip(QWidget):
 
         for i, path in enumerate(self.innerLayout):
             label = QLabel(self.inner)
+            self.innerIcons.append(label)
             pixmap = QPixmap(f"icon{path}.png").scaled(width, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
             label.setPixmap(pixmap)
             label.setGeometry(0, i * screenHeight, width, screenHeight)
         
-        for i, path2 in enumerate(self.innerGhostLayout):
+        for i, path in enumerate(self.innerGhostLayout):
             label = QLabel(self.innerGhost)
-            pixmap = QPixmap(f"icon{path2}.png").scaled(width, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            self.innerGhostIcons.append(label)
+            pixmap = QPixmap(f"icon{path}.png").scaled(width, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
             label.setPixmap(pixmap)
             label.setGeometry(0, i * screenHeight, width, screenHeight)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.animate)
-
 
     def animate(self):
         if not (self.endSequence):
@@ -101,10 +104,22 @@ class SlotStrip(QWidget):
             self.inner.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
             self.debounce = True
 
+            #Randomize icons
+            random.shuffle(self.innerLayout)
+            for i, path in enumerate(self.innerLayout):
+                pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                self.innerIcons[i].setPixmap(pixmap)
+
         #Sets ghoststrip back to start
         if (self.innerGhost.pos().y() >= (2 * temp) + screenHeight):
             self.innerGhost.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
             self.debounce = True
+
+            #Randomize icons
+            random.shuffle(self.innerGhostLayout)
+            for i, path in enumerate(self.innerGhostLayout):
+                pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                self.innerGhostIcons[i].setPixmap(pixmap)
 
         #Condition to end
         if (self.counter == self.spins):
@@ -204,7 +219,7 @@ class MainWindow(QMainWindow):
 
     def win(self):
         probability = random.random()
-        winRate = 1
+        winRate = 0.5
 
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
@@ -271,6 +286,7 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key_Escape:
             self.close()
         # elif event.key() == Qt.Key_Q:
+        #     print(self.slotstrip1.innerGhostLayout)
             # print(self.slotstrip1.inner.pos())
             # print(self.slotstrip1.innerGhost.pos())
             # self.slotstrip1.stopSpin()
