@@ -5,22 +5,22 @@ from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication, QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
+from gpiozero import Button
 
 slots = 6 #Num of icons
 screenHeight = 160 #NxN size for a single slot to be shown (px) 
-viewportOffset = 160 #Y-Offset of slot from y=0 (px)
+slotOffset = 160 #Y-Offset of slot window from y=0 (px)
+viewportOffset = 50 #Extra viewport space to see other slots
 numOfStrips = 5 #Num of strips
 tick = 10 #Tick rate
 majorPrizeIndex = 1 #Num corresponding to major prize icon
 
 icons = [num + 1 for num in range(slots)]
 
-temp = 50 #Extra viewport space to see other slots
-
 class SlotStrip(QWidget):
-    def __init__(self, parent=None, x=0, y=viewportOffset - temp, width=screenHeight, height=screenHeight*slots, id=1):
+    def __init__(self, parent=None, x=0, y=slotOffset - viewportOffset, width=screenHeight, height=screenHeight*slots, id=1):
         super().__init__(parent)
-        self.setGeometry(x, y, width, screenHeight + (2 * temp))
+        self.setGeometry(x, y, width, screenHeight + (2 * viewportOffset))
 
         self.parent = parent
         self.id = id
@@ -68,11 +68,11 @@ class SlotStrip(QWidget):
             self.innerGhost.move(self.innerGhost.pos().x(), self.innerGhost.pos().y() + self.spinRate)
 
             if (self.debounce):
-                if (self.inner.pos().y() >= temp + screenHeight):
+                if (self.inner.pos().y() >= viewportOffset + screenHeight):
                     self.switch = False
                     self.counter += 1
                     self.debounce = False
-                elif (self.innerGhost.pos().y() >= temp + screenHeight):
+                elif (self.innerGhost.pos().y() >= viewportOffset + screenHeight):
                     self.switch = True
                     self.counter += 1
                     self.debounce = False
@@ -100,8 +100,8 @@ class SlotStrip(QWidget):
                     self.innerGhost.move(self.innerGhost.pos().x(), self.innerGhost.pos().y() + self.spinRate)
 
         #Sets normstrip back to start
-        if (self.inner.pos().y() >= (2 * temp) + screenHeight):
-            self.inner.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
+        if (self.inner.pos().y() >= (2 * viewportOffset) + screenHeight):
+            self.inner.move(0, (2 * (-screenHeight * slots)) + ((2 * viewportOffset) + screenHeight))
             self.debounce = True
 
             #Randomize icons
@@ -111,8 +111,8 @@ class SlotStrip(QWidget):
                 self.innerIcons[i].setPixmap(pixmap)
 
         #Sets ghoststrip back to start
-        if (self.innerGhost.pos().y() >= (2 * temp) + screenHeight):
-            self.innerGhost.move(0, (2 * (-screenHeight * slots)) + ((2 * temp) + screenHeight))
+        if (self.innerGhost.pos().y() >= (2 * viewportOffset) + screenHeight):
+            self.innerGhost.move(0, (2 * (-screenHeight * slots)) + ((2 * viewportOffset) + screenHeight))
             self.debounce = True
 
             #Randomize icons
@@ -128,7 +128,7 @@ class SlotStrip(QWidget):
                 self.target = self.innerLayout.index(self.parent.getSlotTargets(self.id) + 1)
             else:
                 self.target = self.innerGhostLayout.index(self.parent.getSlotTargets(self.id) + 1)
-            self.targetPos = -screenHeight * self.target  + temp
+            self.targetPos = -screenHeight * self.target  + viewportOffset
 
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
@@ -186,9 +186,9 @@ class MainWindow(QMainWindow):
 
         #Centers window
         centerPoint = QDesktopWidget().availableGeometry().center()
-        temp1 = self.frameGeometry()
-        temp1.moveCenter(centerPoint)
-        self.move(temp1.topLeft())
+        temp = self.frameGeometry()
+        temp.moveCenter(centerPoint)
+        self.move(temp.topLeft())
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
 
@@ -277,6 +277,9 @@ class MainWindow(QMainWindow):
             self.slotstrip5.endingSequence()
             self.toggle = True
 
+    #Ensures safe call to main GUI thread; button when_pressed handler runs in a background thread
+    def gpioButtonPress(self):
+        QTimer.singleShot(0, self.buttonPress)
 
     def getSlotTargets(self, slotId):
         return self.slotTargets[slotId - 1]
@@ -313,30 +316,30 @@ class MainWindow(QMainWindow):
 
         #UI Things
         self.topBorder = QLabel(self)
-        self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, viewportOffset - temp)
+        self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, slotOffset - viewportOffset)
         self.topBorder.setStyleSheet("background-color: #850b04;")
         self.topBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.topBorderDivide = QLabel(self)
-        self.topBorderDivide.setGeometry(0, viewportOffset - 2 - temp, screenHeight * numOfStrips, 2)
+        self.topBorderDivide.setGeometry(0, slotOffset - 2 - viewportOffset, screenHeight * numOfStrips, 2)
         self.topBorderDivide.setStyleSheet("background-color: black;")
 
         self.botBorder = QLabel(self)
-        self.botBorder.setGeometry(0, viewportOffset + screenHeight + 2 + temp, screenHeight * numOfStrips, self.height() - (viewportOffset + screenHeight + temp) - 2)
+        self.botBorder.setGeometry(0, slotOffset + screenHeight + 2 + viewportOffset, screenHeight * numOfStrips, self.height() - (slotOffset + screenHeight + viewportOffset) - 2)
         self.botBorder.setStyleSheet("background-color: #850b04;")
         self.botBorder.setPixmap(QPixmap("slotbackground1.png"))
 
         self.botBorderDivide = QLabel(self)
-        self.botBorderDivide.setGeometry(0, viewportOffset + screenHeight + temp, screenHeight * numOfStrips, 2)
+        self.botBorderDivide.setGeometry(0, slotOffset + screenHeight + viewportOffset, screenHeight * numOfStrips, 2)
         self.botBorderDivide.setStyleSheet("background-color: black;")
         
         #Temp button
-        self.button = QPushButton("SPIN", self)
-        self.button.setGeometry(self.width() - 110,self.height() - 90,100,80)
-        font_size = int(min(self.button.width(), self.button.height()) * 0.4)
+        self.guiButton = QPushButton("SPIN", self)
+        self.guiButton.setGeometry(self.width() - 110,self.height() - 90,100,80)
+        font_size = int(min(self.guiButton.width(), self.guiButton.height()) * 0.4)
         font = QFont("Impact", font_size, QFont.Bold)
-        self.button.setFont(font)
-        self.button.setStyleSheet(
+        self.guiButton.setFont(font)
+        self.guiButton.setStyleSheet(
         """
         background-color: #e5b31a;
         color: black;
@@ -344,7 +347,12 @@ class MainWindow(QMainWindow):
         border-radius: 10px;
         text-transform: uppercase;                          
         """)
-        self.button.clicked.connect(self.buttonPress)
+
+        #Physical button paired to GPIO pin 20
+        self.button = Button(20, pull_up=True, bounce_time=0.5)
+        self.button.when_activated = self.gpioButtonPress
+
+        self.guiButton.clicked.connect(self.buttonPress)
         self.playSpinSounds(True)
 
         #Title
