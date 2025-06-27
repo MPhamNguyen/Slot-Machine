@@ -113,22 +113,10 @@ class SlotStrip(QWidget):
             self.inner.move(0, (2 * (-screenHeight * slots)) + ((2 * viewportOffset) + screenHeight))
             self.debounce = True
 
-            #Randomize icons
-            # random.shuffle(self.innerLayout)
-            for i, path in enumerate(self.innerLayout):
-                pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-                self.innerIcons[i].setPixmap(pixmap)
-
         #Sets ghoststrip back to start
         if (self.innerGhost.pos().y() >= (2 * viewportOffset) + screenHeight):
             self.innerGhost.move(0, (2 * (-screenHeight * slots)) + ((2 * viewportOffset) + screenHeight))
             self.debounce = True
-
-            #Randomize icons
-            # random.shuffle(self.innerGhostLayout)
-            for i, path in enumerate(self.innerGhostLayout):
-                pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-                self.innerGhostIcons[i].setPixmap(pixmap)
 
         #Automatically play stop slots after a certain time
         if (self.id == 1 and self.counter == 3 * (self.id + 1) and not self.parent.toggle):
@@ -143,6 +131,19 @@ class SlotStrip(QWidget):
                 else:
                     self.target = self.innerGhostLayout.index(self.parent.getSlotTargets(self.id) + 1)
                 self.targetPos = -screenHeight * self.target + viewportOffset
+
+    # def randomizeIcons(self):
+    #     #Randomize icons for strip and ghostStrip
+
+    #     random.shuffle(self.innerLayout)
+    #     for i, path in enumerate(self.innerLayout):
+    #         pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    #         self.innerIcons[i].setPixmap(pixmap)
+
+    #     random.shuffle(self.innerGhostLayout)
+    #     for i, path in enumerate(self.innerGhostLayout):
+    #         pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    #         self.innerGhostIcons[i].setPixmap(pixmap)
 
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
@@ -169,6 +170,7 @@ class SlotStrip(QWidget):
         self.parent.sounds["slotWin"].stop()
         self.parent.finished[self.id - 1] = False
         self.staggeredStart()
+        # self.randomizeIcons()
         
     def staggeredStart(self):
         #Staggers when each slot starts to spin again
