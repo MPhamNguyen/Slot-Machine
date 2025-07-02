@@ -132,18 +132,18 @@ class SlotStrip(QWidget):
                     self.target = self.innerGhostLayout.index(self.parent.getSlotTargets(self.id) + 1)
                 self.targetPos = -screenHeight * self.target + viewportOffset
 
-    # def randomizeIcons(self):
-    #     #Randomize icons for strip and ghostStrip
+    def randomizeIcons(self):
+        #Randomize icons for strip and ghostStrip
 
-    #     random.shuffle(self.innerLayout)
-    #     for i, path in enumerate(self.innerLayout):
-    #         pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    #         self.innerIcons[i].setPixmap(pixmap)
+        random.shuffle(self.innerLayout)
+        for i, path in enumerate(self.innerLayout):
+            pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            self.innerIcons[i].setPixmap(pixmap)
 
-    #     random.shuffle(self.innerGhostLayout)
-    #     for i, path in enumerate(self.innerGhostLayout):
-    #         pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    #         self.innerGhostIcons[i].setPixmap(pixmap)
+        random.shuffle(self.innerGhostLayout)
+        for i, path in enumerate(self.innerGhostLayout):
+            pixmap = QPixmap(f"icon{path}.png").scaled(screenHeight, screenHeight, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            self.innerGhostIcons[i].setPixmap(pixmap)
 
     def sequenceFinished(self):
         self.parent.playSpinSounds(False)
@@ -153,9 +153,9 @@ class SlotStrip(QWidget):
             if (self.parent.majorWin):
                 self.parent.sounds["slotWin"].play()
             else:
-                #Play different sound
+                #NOTE:Play different sound
                 pass
-            #Add light control
+            #NOTE:Add light control
 
     def playLandingSound(self):
         self.parent.sounds["slotLand"].play()
@@ -175,7 +175,14 @@ class SlotStrip(QWidget):
     def staggeredStart(self):
         #Staggers when each slot starts to spin again
         delay = self.id * 200 
-        QTimer.singleShot(delay, lambda: self.timer.start(tick))
+        QTimer.singleShot(delay, lambda: self.staggeredStartHelper())
+    
+    def staggeredStartHelper(self):
+         self.timer.start(tick)
+         if self.id == numOfStrips:
+            self.parent.toggle = False
+
+        #NOTE: Add control for button light up to signify that the button can be pressed again
 
     def endingSequence(self):
         if (self.id == 1):
@@ -328,7 +335,7 @@ class MainWindow(QMainWindow):
 
     def win(self):
         probability = random.random()
-        winRate = 0.33
+        winRate = 0.4
 
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
@@ -384,7 +391,6 @@ class MainWindow(QMainWindow):
             self.slotstrip3.reset()
             self.slotstrip4.reset()
             self.slotstrip5.reset()
-            self.toggle = False
             self.quickEnd = False
             self.debounce = False
         elif (not self.toggle): #Stop the spinning animation
@@ -450,7 +456,7 @@ class MainWindow(QMainWindow):
         text-transform: uppercase;                          
         """)
 
-        #Physical button paired to GPIO pin 20
+        #NOTE:Physical button paired to GPIO pin 20
         # self.button = Button(20, pull_up=True, bounce_time=0.5)
         # self.button.when_activated = self.gpioButtonPress
 
@@ -459,7 +465,8 @@ class MainWindow(QMainWindow):
 
         #Title
         self.title = QLabel(self)
-        self.title.setGeometry(231,20,338,80)
+        self.title.setGeometry(133,-20,534,136)
+        # self.title.setGeometry(231,96,338,80)
         self.title.setPixmap(QPixmap("title.png"))
         self.title.setScaledContents(True)
 
