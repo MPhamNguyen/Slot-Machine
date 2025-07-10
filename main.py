@@ -119,7 +119,7 @@ class SlotStrip(QWidget):
             self.debounce = True
 
         #Automatically play stop slots after a certain time
-        if (self.id == 1 and self.counter == 3 * (self.id + 1) and not self.parent.toggle):
+        if (self.id == 1 and self.counter == 8 and not self.parent.toggle):
             self.parent.forceEndingSequence()
 
         #Condition to end
@@ -293,6 +293,11 @@ class MainWindow(QMainWindow):
         self.globalSpin = -1 #Basis for ending
         self.quickEnd = False
         self.finished = [False for i in range(numOfStrips)]
+
+        self.almostWin = {
+            excluded: [i for i in range(6) if i != excluded]
+            for excluded in range(6)
+        }
         
         #Calculates if you win on startup
         self.win()
@@ -346,6 +351,9 @@ class MainWindow(QMainWindow):
                 self.majorWin = True
             else:
                 self.majorWin = False
+        elif winRate < probability and probability <= 0.6: #Almost win condition
+            targetSlot = random.randint(0,slots - 1)
+            self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, random.choice(self.almostWin[targetSlot])]
         else:
             first, second, third, fourth, fifth = random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1)
 
