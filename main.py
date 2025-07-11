@@ -6,7 +6,6 @@ from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication, QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
 from gpiozero import Button
-import time
 
 slots = 6 #Num of icons
 screenHeight = 160 #NxN size for a single slot to be shown (px) 
@@ -120,7 +119,7 @@ class SlotStrip(QWidget):
             self.debounce = True
 
         #Automatically play stop slots after a certain time
-        if (self.id == slots - 1 and self.counter == 2 and not self.parent.toggle):
+        if (self.id == slots - 1 and self.counter == 4 and not self.parent.toggle):
             self.parent.forceEndingSequence()
 
         #Condition to end
@@ -182,7 +181,7 @@ class SlotStrip(QWidget):
         self.timer.start(tick)
         if self.id == numOfStrips:
             self.parent.toggle = False
-            
+             
         #NOTE: Add control for button light up to signify that the button can be pressed again
 
     def endingSequence(self):
