@@ -6,6 +6,7 @@ from PyQt5.QtCore import QTimer, Qt, QUrl, QCoreApplication, QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtMultimedia import QSoundEffect
 from gpiozero import Button
+import time
 
 slots = 6 #Num of icons
 screenHeight = 160 #NxN size for a single slot to be shown (px) 
@@ -119,7 +120,7 @@ class SlotStrip(QWidget):
             self.debounce = True
 
         #Automatically play stop slots after a certain time
-        if (self.id == 1 and self.counter == 8 and not self.parent.toggle):
+        if (self.id == slots - 1 and self.counter == 2 and not self.parent.toggle):
             self.parent.forceEndingSequence()
 
         #Condition to end
@@ -178,10 +179,10 @@ class SlotStrip(QWidget):
         QTimer.singleShot(delay, lambda: self.staggeredStartHelper())
     
     def staggeredStartHelper(self):
-         self.timer.start(tick)
-         if self.id == numOfStrips:
+        self.timer.start(tick)
+        if self.id == numOfStrips:
             self.parent.toggle = False
-
+            
         #NOTE: Add control for button light up to signify that the button can be pressed again
 
     def endingSequence(self):
@@ -293,7 +294,7 @@ class MainWindow(QMainWindow):
         self.globalSpin = -1 #Basis for ending
         self.quickEnd = False
         self.finished = [False for i in range(numOfStrips)]
-
+    
         self.almostWin = {
             excluded: [i for i in range(6) if i != excluded]
             for excluded in range(6)
@@ -340,7 +341,7 @@ class MainWindow(QMainWindow):
 
     def win(self):
         probability = random.random()
-        winRate = 0.4
+        winRate = 0.1
 
         if (probability <= winRate):
             targetSlot = random.randint(0,slots - 1)
@@ -351,9 +352,12 @@ class MainWindow(QMainWindow):
                 self.majorWin = True
             else:
                 self.majorWin = False
-        elif winRate < probability and probability <= 0.6: #Almost win condition
+
+
+        elif winRate < probability and probability <= 0.5: #Almost win condition
             targetSlot = random.randint(0,slots - 1)
             self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, random.choice(self.almostWin[targetSlot])]
+            self.winFlag = False
         else:
             first, second, third, fourth, fifth = random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1), random.randint(0,slots - 1)
 
@@ -410,7 +414,7 @@ class MainWindow(QMainWindow):
             self.toggle = True
             self.quickEnd = True
 
-    #Ensures safe call to main GUI thread; button when_activated handler runs in a background thread
+    #Ensures safe call to main GUI thread; button when_pressed handler runs in a background thread
     def gpioButtonPress(self):
         QTimer.singleShot(0, self.buttonPress)
 
@@ -434,7 +438,7 @@ class MainWindow(QMainWindow):
         self.topBorder = QLabel(self)
         self.topBorder.setGeometry(0, -2, screenHeight * numOfStrips, slotOffset - viewportOffset)
         self.topBorder.setStyleSheet("background-color: #850b04;")
-        self.topBorder.setPixmap(QPixmap("slotbackground1.png"))
+        self.topBorder.setPixmap(QPixmap("slotbackground.png"))
 
         self.topBorderDivide = QLabel(self)
         self.topBorderDivide.setGeometry(0, slotOffset - 2 - viewportOffset, screenHeight * numOfStrips, 2)
@@ -443,7 +447,7 @@ class MainWindow(QMainWindow):
         self.botBorder = QLabel(self)
         self.botBorder.setGeometry(0, slotOffset + screenHeight + 2 + viewportOffset, screenHeight * numOfStrips, self.height() - (slotOffset + screenHeight + viewportOffset) - 2)
         self.botBorder.setStyleSheet("background-color: #850b04;")
-        self.botBorder.setPixmap(QPixmap("slotbackground1.png"))
+        self.botBorder.setPixmap(QPixmap("slotbackground.png"))
 
         self.botBorderDivide = QLabel(self)
         self.botBorderDivide.setGeometry(0, slotOffset + screenHeight + viewportOffset, screenHeight * numOfStrips, 2)
@@ -464,9 +468,9 @@ class MainWindow(QMainWindow):
         text-transform: uppercase;                          
         """)
 
-        #NOTE:Physical button paired to GPIO pin 20
-        # self.button = Button(20, pull_up=True, bounce_time=0.5)
-        # self.button.when_activated = self.gpioButtonPress
+        #NOTE:Physical button paired to GPIO pin 17
+        # self.button = Button(17, pull_up=True)
+        # self.button.when_pressed = self.gpioButtonPress
 
         self.guiButton.clicked.connect(self.buttonPress)
         self.playSpinSounds(True)
