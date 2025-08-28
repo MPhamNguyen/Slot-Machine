@@ -153,8 +153,8 @@ class SlotStrip(QWidget):
             if (self.parent.majorWin):
                 self.parent.sounds["slotWin"].play()
             else:
-                #NOTE:Play different sound
-                pass
+                self.parent.sounds["slotMinorWin"].play()
+
             #NOTE:Add light control
 
     def playLandingSound(self):
@@ -318,7 +318,9 @@ class MainWindow(QMainWindow):
             "slotLoop": QSoundEffect(),
             "slotLand": QSoundEffect(),
             "slotWin": QSoundEffect(),
+            "slotMinorWin": QSoundEffect(),
         }
+
         self.sounds["slotLoop"].setSource(QUrl.fromLocalFile("slotloop.wav"))
         self.sounds["slotLoop"].setLoopCount(QSoundEffect.Infinite)
         self.sounds["slotLoop"].setVolume(0.1)
@@ -330,6 +332,10 @@ class MainWindow(QMainWindow):
         self.sounds["slotWin"].setSource(QUrl.fromLocalFile("slotwin.wav"))
         self.sounds["slotWin"].setLoopCount(1)
         self.sounds["slotWin"].setVolume(0.1)
+
+        self.sounds["slotMinorWin"].setSource(QUrl.fromLocalFile("slotminorwin.wav"))
+        self.sounds["slotMinorWin"].setLoopCount(1)
+        self.sounds["slotMinorWin"].setVolume(0.2)
 
         for sound in self.sounds.values():
             while sound.status() != QSoundEffect.Ready:
@@ -353,7 +359,7 @@ class MainWindow(QMainWindow):
                 self.majorWin = False
 
 
-        elif winRate < probability and probability <= 0.5: #Almost win condition
+        elif winRate < probability and probability <= 0.4: #Almost win condition
             targetSlot = random.randint(0,slots - 1)
             self.slotTargets = [targetSlot, targetSlot, targetSlot, targetSlot, random.choice(self.almostWin[targetSlot])]
             self.winFlag = False
@@ -453,25 +459,25 @@ class MainWindow(QMainWindow):
         self.botBorderDivide.setStyleSheet("background-color: black;")
         
         #Temp button
-        self.guiButton = QPushButton("SPIN", self)
-        self.guiButton.setGeometry(self.width() - 110,self.height() - 90,100,80)
-        font_size = int(min(self.guiButton.width(), self.guiButton.height()) * 0.4)
-        font = QFont("Impact", font_size, QFont.Bold)
-        self.guiButton.setFont(font)
-        self.guiButton.setStyleSheet(
-        """
-        background-color: #e5b31a;
-        color: black;
-        border: 2px solid black;
-        border-radius: 10px;
-        text-transform: uppercase;                          
-        """)
+        # self.guiButton = QPushButton("SPIN", self)
+        # self.guiButton.setGeometry(self.width() - 110,self.height() - 90,100,80)
+        # font_size = int(min(self.guiButton.width(), self.guiButton.height()) * 0.4)
+        # font = QFont("Impact", font_size, QFont.Bold)
+        # self.guiButton.setFont(font)
+        # self.guiButton.setStyleSheet(
+        # """
+        # background-color: #e5b31a;
+        # color: black;
+        # border: 2px solid black;
+        # border-radius: 10px;
+        # text-transform: uppercase;                          
+        # """)
 
         #NOTE:Physical button paired to GPIO pin 17
-        # self.button = Button(17, pull_up=True)
-        # self.button.when_pressed = self.gpioButtonPress
+        self.button = Button(17, pull_up=True)
+        self.button.when_pressed = self.gpioButtonPress
 
-        self.guiButton.clicked.connect(self.buttonPress)
+        # self.guiButton.clicked.connect(self.buttonPress)
         self.playSpinSounds(True)
 
         #Title
@@ -481,8 +487,8 @@ class MainWindow(QMainWindow):
         self.title.setPixmap(QPixmap("title.png"))
         self.title.setScaledContents(True)
 
-        self.show() #For testing purposes
-        # self.showFullScreen() #Comment back on live version
+        # self.show() #For testing purposes
+        self.showFullScreen() #Comment back on live version
 
         #Initial Startup
         self.slotstrip1.staggeredStart()
