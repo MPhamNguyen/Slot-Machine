@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.slotTargets = [0,0,0,0,0]
-        self.toggle = False #Controls button functionality from slot stop/reset
+        self.toggle = True #Controls button functionality from slot stop/reset
         self.debounce = False #Prevents button spam
         self.winFlag = False #Win flag
         self.majorWin = False
@@ -474,8 +474,8 @@ class MainWindow(QMainWindow):
         # """)
 
         #NOTE:Physical button paired to GPIO pin 17
-        self.button = Button(17, pull_up=True)
-        self.button.when_pressed = self.gpioButtonPress
+        # self.button = Button(17, pull_up=True)
+        # self.button.when_pressed = self.gpioButtonPress
 
         # self.guiButton.clicked.connect(self.buttonPress)
         self.playSpinSounds(True)
